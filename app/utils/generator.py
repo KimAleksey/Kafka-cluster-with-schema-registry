@@ -21,8 +21,8 @@ def generate_user_coordinates() -> dict[str, Any]:
     fake = faker.Faker(locale='ru_RU')
     user_coordinates = {
         "id": random.randint(1,100),
-        "longitude": fake.longitude(),
-        "latitude": fake.latitude(),
+        "longitude": float(fake.longitude()),
+        "latitude": float(fake.latitude()),
     }
     # Логирование
     logging.info(f"""
