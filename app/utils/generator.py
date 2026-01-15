@@ -25,11 +25,11 @@ def generate_user_coordinates() -> dict[str, Any]:
         "latitude": float(fake.latitude()),
     }
     # Логирование
-    logging.info(f"""
-    Координаты пользователя {user_coordinates['id']}:
-      longitude = {user_coordinates['longitude']}
-      latitude  = {user_coordinates['latitude']}
-    """.strip())
+    logging.info(
+        f"Координаты пользователя {user_coordinates['id']}, "
+        f"longitude = {user_coordinates['longitude']}, "
+        f"latitude  = {user_coordinates['latitude']}".strip()
+    )
 
     return user_coordinates
 
