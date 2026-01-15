@@ -26,8 +26,23 @@ USERS_COORDINATES_JSON_SCHEMA = {
     "required": ["id", "longitude", "latitude"]
 }
 
-# Название схемы.
-USERS_COORDINATES_SUBJECT = "users-coordinates-values"
+
+def get_users_coordinates_subject() -> str:
+    """
+    Получаем название схемы для данных о координатах пользователей.
+
+    :return: Schema name: str.
+    """
+    # Получаем секреты
+    env_path = Path(__file__).resolve().parent.parent.parent / '.env'
+    if env_path.exists():
+        load_dotenv(dotenv_path=env_path)
+    else:
+        raise FileNotFoundError(f"Environment file {env_path} not found")
+    # Schema name
+    schema_registry_url = os.getenv("KAFKA_USERS_COORDINATES_SUBJECT")
+    logging.info(f"Schema name: {schema_registry_url}")
+    return schema_registry_url
 
 
 def get_schema_registry_url() -> str:
@@ -51,7 +66,7 @@ def get_schema_registry_url() -> str:
 def create_user_coordinates_schema(
         url: str | None,
         json_schema: dict[Any, Any] | None,
-        subject: str | None = USERS_COORDINATES_SUBJECT
+        subject: str | None = None
 ) -> None:
     """
     Создаем схему для users_coordinates.
@@ -61,13 +76,16 @@ def create_user_coordinates_schema(
     if json_schema is None:
         json_schema = USERS_COORDINATES_JSON_SCHEMA.deepcopy()
 
+    if subject is None:
+        subject = get_users_coordinates_subject()
+
     payload = {
         "schemaType": "JSON",
         "schema": json.dumps(json_schema)
     }
 
     response = requests.post(
-        f"{url}/subjects/{USERS_COORDINATES_SUBJECT}/versions",
+        f"{url}/subjects/{subject}/versions",
         headers={"Content-Type": "application/vnd.schemaregistry.v1+json"},
         json=payload
     )
@@ -78,24 +96,27 @@ def create_user_coordinates_schema(
         logging.info(f"❌ Схема не зарегистрирована. {response.status_code} {response.text}")
 
 
-def get_user_coordinates_schema(url: str, subject: str | None = USERS_COORDINATES_SUBJECT) -> None:
+def get_user_coordinates_schema(url: str, subject: str | None = None) -> None:
     """
     Выводим в консоль информацию о схеме
 
     :return: None.
     """
+    if subject is None:
+        subject = get_users_coordinates_subject()
     # Получаем URL
-    user_coordinates_schema_url = url + f"/subjects/{USERS_COORDINATES_SUBJECT}/versions/1"
+    user_coordinates_schema_url = url + f"/subjects/{subject}/versions/1"
     # Запрашиваем данные схемы
     response = requests.get(url=user_coordinates_schema_url)
 
     if response.ok:
-        logging.info(f"✅ Схема {USERS_COORDINATES_SUBJECT} получена. Schema: {response.json()['schema']}")
+        logging.info(f"✅ Схема {subject} получена. Schema: {response.json()['schema']}")
     else:
-        logging.info(f"❌ Схема {USERS_COORDINATES_SUBJECT} не получена. {response.status_code} {response.text}")
+        logging.info(f"❌ Схема {subject} не получена. {response.status_code} {response.text}")
 
 
 if __name__ == "__main__":
     base_url = get_schema_registry_url()
-    create_user_coordinates_schema(url=base_url, json_schema=USERS_COORDINATES_JSON_SCHEMA)
-    get_user_coordinates_schema(base_url)
+    schema_subject = get_users_coordinates_subject()
+    create_user_coordinates_schema(url=base_url, json_schema=USERS_COORDINATES_JSON_SCHEMA, subject=schema_subject)
+    get_user_coordinates_schema(base_url, subject=schema_subject)

@@ -86,6 +86,9 @@ def produce(with_errors: bool = False) -> None:
                 on_delivery=delivery_report,    # Колбэк, который вызывается после доставки (или ошибки)
             )
 
+            # Обработать доставленные сообщения
+            producer.poll(0)
+
             # Имитация отправки раз в секунду
             time.sleep(1)
     except KeyboardInterrupt:

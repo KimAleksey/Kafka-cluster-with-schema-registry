@@ -1,7 +1,8 @@
 import random
-import uuid
+import json
 import faker
 import logging
+
 
 from typing import Any
 
@@ -30,6 +31,7 @@ def generate_user_coordinates() -> dict[str, Any]:
         f"longitude = {user_coordinates['longitude']}, "
         f"latitude  = {user_coordinates['latitude']}".strip()
     )
+    logging.info("Данные пользователя:\n%s", json.dumps(user_coordinates, indent=4, ensure_ascii=False))
 
     return user_coordinates
 
