@@ -100,7 +100,7 @@ def produce(with_errors: bool = False) -> None:
             producer.poll(0)
 
             # Имитация отправки раз в секунду
-            time.sleep(10)
+            time.sleep(1)
     except KeyboardInterrupt:
         # Принудительно отправляем все накопленные сообщения (flush ждёт завершения всех операций)
         producer.flush()
