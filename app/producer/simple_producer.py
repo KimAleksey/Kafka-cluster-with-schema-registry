@@ -49,7 +49,7 @@ def produce(with_errors: bool = False) -> None:
         # Адрес Kafka брокеров
         "bootstrap.servers": bootstrap_server,
 
-        # Сериализатор ключа сообщений — здесь используется IntegerSerializer, так как ключ "id" целочисленный
+        # Сериализатор ключа сообщений — здесь используется StringSerializer
         "key.serializer": StringSerializer("utf_8"),
 
         # Сериализатор значения сообщений — JSONSerializer для отправки словаря Python как JSON
