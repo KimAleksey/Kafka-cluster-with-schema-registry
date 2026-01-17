@@ -100,6 +100,7 @@ docker compose up -d
 1. Перейти в http://localhost:8888/.
 
 ![img.png](docs/images/img_2.png)
+
 2. Убедиться что в topic идет запись сообщений.
 
 ![img.png](docs/images/img_3.png)
