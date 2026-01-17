@@ -264,7 +264,6 @@ producer = SerializingProducer(producer_conf)
 - Делаем flush. Опционально, в данном случае для обработки внештатной остановки программы.
 
 Для produce важно.
->[!info]
 > - Сообщение не уходит в сеть мгновенно.
 > - Оно кладётся в внутреннюю очередь `librdkafka`.
 > - `poll()` или `flush()` служат для того, чтобы клиент обработал очередь:
@@ -297,5 +296,65 @@ producer.produce(
 
 1. Получаем сервер брокера, топик, сервер Schema Registry, JSON схемы в формате python словаря.
 2. JSON схемы сериализуем в JSON формат в виде строки.
-3. Создаем сериализатор JSONSerializer для отправки сообщений в Kafka с проверкой сообщения на соответствие схеме.
-4. Создаем конфигурацию Producer.
+3. Создаем десериализатор JSONDeserializer для получения сообщений из Kafka и десериализации его с проверкой сообщения на соответствие схеме.
+4. Создаем конфигурацию Consumer.
+
+```python
+# Конфигурация Consumer.
+python_consumer_conf = {
+    # Адрес Kafka брокеров
+    "bootstrap.servers": bootstrap_server,
+
+    # Consumer группа.
+    "group.id": "simple_consumer.py",
+
+    # Kafka начинает читать сначала, если offset не задан и не найден для Consumer.
+    "auto.offset.reset": "earliest",
+
+    # Kafka сама отметит, что сообщения до этого смещения прочитаны.
+    "enable.auto.commit": auto_commit,
+
+    # Десериализатор ключа.
+    "key.deserializer": StringDeserializer("utf-8"),
+
+    # Десериализатор значения.
+    "value.deserializer": json_deserializer,
+}
+```
+
+Из важного:
+- Для указания группы используется group.id.
+> group.id в Kafka Consumer — это идентификатор группы потребителей. 
+> Он нужен для того, чтобы Kafka могла управлять распределением сообщений между несколькими Consumer и отслеживать смещения (offsets).
+- Для указания с какого offset читать если offset для данного Consumer не задан используется параметр auto.offset.reset.
+- Для параметризации фиксации offset используется параметр enable.auto.commit.
+- Для десериализации сообщений используются параметры key.deserializer и value.deserializer.
+
+5. Создается Consumer с ранее заданным конфигурационным словарем с десериализотором и проверкой схемы.
+6. В случае если не указано, с какого offset начать читать - создается подписка на topic, иначе - проставляется offset вручную, с какого читать.
+
+```python
+if not reset_offsets:
+    # Получаем список партиций
+    partitions = consumer.list_topics(users_coordinates_topic).topics[users_coordinates_topic].partitions
+    # Вручную задаём offset для каждой партиции.
+    consumer.assign([TopicPartition(users_coordinates_topic, p, 0) for p in partitions])
+    logging.info("Offsets для всех партиций установлены на 0.")
+else:
+    # Подписываемся на topic, Kafka сама определяет с какого offset начать.
+    consumer.subscribe([users_coordinates_topic])
+```
+
+7. В бесконечном цикле считываем сообщение из Topic.
+
+Для этого:
+- Делаем poll для получения одного сообщения.
+> - poll(timeout) пытается получить одно сообщение из Kafka.
+> - Параметр 1.0 = тайм-аут в секундах, то есть poll будет ждать до 1 секунды, если сообщения пока нет. 
+> - если сообщений нет после тайм-аута, poll возвращает None.
+- Если poll вызвал ошибку ValueDeserializationError, то означает что полученное сообщение не соответствует схеме. Пропускаем его.
+- Если сообщений нет, poll вернул None → просто продолжаем цикл
+- Если пришла ошибка KafkaError, то нечего читать больше → просто продолжаем цикл
+- Десериализуем сообщение с помощью функции value().
+- Если все ок и автокоммит - False, то делаем ручной коммит offset.
+- Если произошла ошибка при десериализации - пропускаем сообщение.
